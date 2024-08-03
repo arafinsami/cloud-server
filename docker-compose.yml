@@ -1,9 +1,60 @@
+version: '3.8'
+
 services:
   zipkin:
     image: ghcr.io/openzipkin/zipkin-slim:${TAG:-latest}
     container_name: zipkin
     environment:
       - STORAGE_TYPE=mem
-      - MYSQL_HOST=mysql
     ports:
       - 9411:9411
+    networks:
+      - dbh-network
+
+  spring-boot-service1:
+    image: dbh-gateway:V.1.0.0
+    container_name: dbh-gateway-container
+    environment:
+      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
+      - SPRING_PROFILES_ACTIVE=default
+    ports:
+      - 9999:9999
+    networks:
+      - dbh-network
+
+  spring-boot-service2:
+    image: dbh-app:V.1.0.0
+    container_name: dbh-app-container
+    environment:
+      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
+      - SPRING_PROFILES_ACTIVE=default
+    ports:
+      - 8001:8001
+    networks:
+      - dbh-network
+
+  spring-boot-service3:
+    image: dbh-query-service-app:V.1.0.0
+    container_name: dbh-query-service-app-container
+    environment:
+      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
+      - SPRING_PROFILES_ACTIVE=default
+    ports:
+      - 8002:8002
+    networks:
+      - dbh-network
+
+  spring-boot-service4:
+    image: dbh-command-service-app:V.1.0.0
+    container_name: dbh-command-service-app-container
+    environment:
+      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
+      - SPRING_PROFILES_ACTIVE=default
+    ports:
+      - 8003:8003
+    networks:
+      - dbh-network
+
+networks:
+  dbh-network:
+
