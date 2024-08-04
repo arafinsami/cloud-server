@@ -11,50 +11,87 @@ services:
     networks:
       - dbh-network
 
-  spring-boot-service1:
-    image: dbh-gateway:V.1.0.0
-    container_name: dbh-gateway-container
+  dbh-mysql-container:
+    image: mysql:8.0
+    container_name: dbh-mysql-container
     environment:
-      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
-      - SPRING_PROFILES_ACTIVE=default
+      - MYSQL_ROOT_PASSWORD=arafinN@12
+      - MYSQL_DATABASE=dbh
+    ports:
+      - 3307:3306
+    networks:
+      - dbh-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dbh-discovery-server:
+    image: dbh-discovery-server:V.1.0.0
+    container_name: dbh-discovery-server
+    ports:
+      - 8761:8761
+    networks:
+      - dbh-network
+
+  dbh-gateway:
+    image: dbh-gateway:V.1.0.0
+    container_name: dbh-gateway
     ports:
       - 9999:9999
     networks:
       - dbh-network
-
-  spring-boot-service2:
-    image: dbh-app:V.1.0.0
-    container_name: dbh-app-container
     environment:
-      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
-      - SPRING_PROFILES_ACTIVE=default
-    ports:
-      - 8001:8001
-    networks:
-      - dbh-network
+      - SPRING_PROFILES_ACTIVE=docker
 
-  spring-boot-service3:
-    image: dbh-query-service-app:V.1.0.0
-    container_name: dbh-query-service-app-container
-    environment:
-      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
-      - SPRING_PROFILES_ACTIVE=default
-    ports:
-      - 8002:8002
-    networks:
-      - dbh-network
-
-  spring-boot-service4:
+  dbh-command-service-app:
     image: dbh-command-service-app:V.1.0.0
-    container_name: dbh-command-service-app-container
-    environment:
-      - SPRING_ZIPKIN_BASE_URL=http://zipkin:9411
-      - SPRING_PROFILES_ACTIVE=default
+    container_name: dbh-command-service-app
     ports:
       - 8003:8003
     networks:
       - dbh-network
+    depends_on:
+      dbh-mysql-container:
+        condition: service_healthy
+    environment:
+      - DATABASE_HOST=dbh-mysql-container
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=dbh
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=arafinN@12
+      - SPRING_PROFILES_ACTIVE=docker
+
+  dbh-query-service-app:
+    image: dbh-query-service-app:V.1.0.0
+    container_name: dbh-query-service-app
+    ports:
+      - 8002:8002
+    networks:
+      - dbh-network
+    depends_on:
+      dbh-mysql-container:
+        condition: service_healthy
+    environment:
+      - DATABASE_HOST=dbh-mysql-container
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=dbh
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=arafinN@12
+      - SPRING_PROFILES_ACTIVE=docker
+
+  dbh-app:
+    image: dbh-app:V.1.0.0
+    container_name: dbh-app
+    ports:
+      - 8001:8001
+    networks:
+      - dbh-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
 
 networks:
   dbh-network:
+    driver: bridge
 
